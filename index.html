@@ -28,6 +28,35 @@
       <button id="color-code">Color By Compression</button>
       <button id="compression-code">Size By Compression</button>
     </div>
+    <div id="intro">
+      <p>
+        Gzip is a file format that uses the DEFLATE compression algorithm.
+        DEFLATE compresses data using 2 primary methods. Huffman Coding is used
+        to encode values with varying numbers of bits (as opposed to no
+        compression, which would use 8 bits -- 1 byte -- per ASCII character).
+        In addition to Huffman Coding, Lempel-Ziv 77 (LZ77) encoding is used to
+        represent repeated sequences of values as
+        <em>&lt;distance, length&gt;</em> pairs. When the decoder encounters
+        such a pair, it looks back <em>distance</em> bytes in the decoded-so-far
+        output and copies <em>length</em> bytes.
+      </p>
+      <p>
+        This is a visualizer of the Gzip encoding of the poem
+        <em>The Raven</em>, by Edgar Allen Poe. Click "animate" to view the
+        decoded values in real-time. The animation displays each character at a
+        speed proportional to the number of bits that were needed in the
+        compressed file to encode that character. It also highlights the source
+        and copied data when it encounters
+        <em>&lt;distance, length&gt;</em> pairs.
+      </p>
+      <p>
+        The "Color By Compression" button color-codes the characters by the
+        number bits needed to encode that character. The scale goes from deep
+        blue (fewest bits) to white (8 bits: aka 1 byte), to red (most bits).
+        The "Size By Compression" button adjusts all the characters to have a
+        width that is proportional to the number of bits needed to encode them.
+      </p>
+    </div>
     <section id="characters"></section>
   </body>
 </html>
