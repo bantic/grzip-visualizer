@@ -3,7 +3,11 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
+  "scripts": {
+    "deploy": "parcel build index.html && cp CNAME dist/ && surge dist"
+  },
   "devDependencies": {
+    "cssnano": "^4.1.10",
     "sass": "^1.17.3",
     "typescript": "^3.3.4000"
   },
