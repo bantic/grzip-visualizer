@@ -234,6 +234,9 @@ export class CharController {
     findEl(`#compression-code`).addEventListener('click', () => {
       this.revealCompressionCodes();
     });
+    findEl(`#animate`).addEventListener('click', () => {
+      this.animate();
+    });
   }
 
   revealCompressionCodes() {
@@ -278,6 +281,10 @@ export class CharController {
   }
 
   animate() {
+    if (this.animator) {
+      this.animator.stop();
+      this.animator = null;
+    }
     this.animator = new AnimationController(this);
     this.animator.run();
   }
@@ -323,7 +330,6 @@ class App {
     this.render();
     let controller = new CharController(this.el, this.chars, this.matches);
     controller.run();
-    controller.animate();
   }
 
   render() {

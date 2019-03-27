@@ -9,20 +9,25 @@
     <script src="index.js"></script>
   </head>
   <body>
-    Bits Per Second: <span id="bps"></span>
-    <input
-      type="range"
-      name="bits-per-second"
-      id="bps-input"
-      min="4"
-      max="128"
-      step="4"
-      value="128"
-    />
-    <br />
-    <button id="reveal">Reveal All</button>
-    <button id="color-code">Color By Compression</button>
-    <button id="compression-code">Size By Compression</button>
+    <h1>The Raven.gz</h1>
+    <div id="controls">
+      Bits Per Second
+      <input
+        type="range"
+        name="bits-per-second"
+        id="bps-input"
+        min="4"
+        max="128"
+        step="4"
+        value="8"
+      />
+      <span id="bps"></span>
+      <br />
+      <button id="reveal">Reveal All</button>
+      <button id="animate">Animate</button>
+      <button id="color-code">Color By Compression</button>
+      <button id="compression-code">Size By Compression</button>
+    </div>
     <section id="characters"></section>
   </body>
 </html>

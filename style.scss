@@ -1,9 +1,30 @@
+body {
+  margin: 1em;
+}
+
+#controls {
+  font-size: 2em;
+}
+
+#controls button,
+#controls input {
+  font-size: 0.75em;
+}
+
+#characters {
+  margin-top: 1em;
+  line-height: 1.75em;
+  font-size: 1.65em;
+  color: black;
+  font-family: monospace;
+  background-color: #0000000d;
+  display: inline-block;
+  padding: 1em;
+}
+
 .character {
-  color: #404040;
-  font-size: 1.25em;
   display: inline-block;
   text-align: center;
-  font-family: monospace;
 }
 
 .hidden {
@@ -15,7 +36,7 @@
 }
 
 [data-match-index] {
-  background-color: #cddbf55e;
+  background-color: #cddbf58f;
 }
 
 .anim-char-active {
@@ -45,12 +66,20 @@
   background-color: #1b00ff75;
 }
 
-@for $i from 0 through 32 {
+@for $i from 0 through 11 {
   // See http://doejo.com/blog/dynamically-generating-colors-with-sass-for-data-visualization/
   .reveal-color-codes [data-quantized-bit-length='#{$i}'] {
-    background: mix(red, blue, $i * (100/32));
+    background: mix(white, blue, $i * (100/11));
   }
+}
+@for $i from 0 through 11 {
+  // See http://doejo.com/blog/dynamically-generating-colors-with-sass-for-data-visualization/
+  .reveal-color-codes [data-quantized-bit-length='#{$i+11}'] {
+    background: mix(red, white, $i * (100/11));
+  }
+}
 
+@for $i from 0 through 22 {
   .reveal-compression-codes [data-quantized-bit-length='#{$i}'] {
     width: #{$i / 16}em;
   }

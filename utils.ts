@@ -17,9 +17,9 @@ export function removeAllClass(classNames: string[]) {
   );
 }
 
-// Will return a value in the range 0-32 by 1
+// Will return a value in the range 0-22 by 1
 export function quantize(val: number): number {
-  if (val > 16) {
+  if (val > 11) {
     throw `Bad val`;
   }
   return Math.round(val * 2);
