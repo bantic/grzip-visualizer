@@ -1,61 +1,123 @@
-interface Literal {
-  type: string;
-  value: number;
-  stringValue: string[];
-  data: DecodeData;
-  index: number;
-  matchIndices: number[];
-}
+import {
+  HTML_CHAR_ACTIVE_CLASS,
+  HTML_CHAR_EL_CLASSES,
+  HTML_CHAR_CLASS,
+  HTML_HIDDEN
+} from './html';
+import { findEl, removeAllClass } from './utils';
 
 interface DecodeData {
-  bits: Boolean[];
+  bits: boolean[];
   block_id: number;
 }
 
-interface Match {
-  type: string;
-  length: number;
-  distance: number;
+interface RawDecodeItem {
+  type: DecodeItemType;
   data: DecodeData;
-  stringValue: string[];
-  literalIndex: number;
 }
 
-type DecodeItem = Literal | Match;
+interface RawLiteralDecodeItem extends RawDecodeItem {
+  value: number; // byte value
+}
+
+interface RawMatchDecodeItem extends RawDecodeItem {
+  length: number;
+  distance: number;
+}
+
+enum DecodeItemType {
+  Literal = 'Literal',
+  Match = 'Match'
+}
+export enum DecodeCharType {
+  Literal = DecodeItemType.Literal,
+  Match = DecodeItemType.Match
+}
+
+interface DecodeItem extends RawDecodeItem {
+  chars: string[];
+}
+
+interface LiteralDecodeItem extends DecodeItem {}
+export interface MatchDecodeItem extends DecodeItem {
+  length: number;
+  distance: number;
+}
+
+export interface DecodeChar {
+  type: DecodeCharType;
+  char: string;
+  index: number;
+  item: DecodeItem;
+  bits: boolean[];
+  bitLength: number;
+  destMatchIndices: number[]; // The indices of all match(es) that reference this char
+}
+
+interface LiteralDecodeChar extends DecodeChar {}
+
+export interface MatchDecodeChar extends DecodeChar {
+  srcIndex: number; // The index of the DecodeChar this was copied from
+  matchIndex: number; // The index of the match that produced this DecodeChar
+}
 
 class DecodeItemParser {
-  data: DecodeItem[];
-  decodedBytes: number[];
-  index: number;
-  constructor(data: DecodeItem[]) {
-    this.data = data;
-    this.decodedBytes = [];
-    this.index = 0;
+  rawData: RawDecodeItem[];
+  parsedData: DecodeItem[];
+  curIndex: number;
+  bytes: number[];
+  constructor(data: RawDecodeItem[]) {
+    this.rawData = data;
+    this.parsedData = [];
+    this.curIndex = 0;
+    this.bytes = [];
   }
-  parse(): number[] {
-    this.index = 0;
-    for (let item of this.data) {
-      this.parseItem(item);
+  parse(): DecodeItem[] {
+    this.curIndex = 0;
+    for (let item of this.rawData) {
+      this.parsedData.push(this.parseItem(item));
     }
-    return this.decodedBytes;
+    return this.parsedData;
   }
 
-  parseItem(item: DecodeItem) {
-    if (item.type === 'Literal') {
-      this.parseLiteral(item as Literal);
-    } else if (item.type === 'Match') {
-      this.parseMatch(item as Match);
+  parseItem(item: RawDecodeItem): DecodeItem {
+    if (item.type === DecodeItemType.Literal) {
+      return this.parseLiteral(item as RawLiteralDecodeItem);
+    } else if (item.type === DecodeItemType.Match) {
+      return this.parseMatch(item as RawMatchDecodeItem);
     } else {
       throw `Unexpected item type ${item.type}`;
     }
   }
 
-  parseLiteral(item: Literal) {
+  parseLiteral(item: RawLiteralDecodeItem): LiteralDecodeItem {
     let value = item.value;
-    this.decodedBytes.push(value);
-    this.index += 1;
+    this.bytes.push(value);
+    this.curIndex += 1;
+    return {
+      type: item.type,
+      data: item.data,
+      chars: [this.stringValue(value)]
+    };
+  }
 
-    item.stringValue = [this.stringValue(value)];
+  parseMatch(item: RawMatchDecodeItem): MatchDecodeItem {
+    let { length, distance } = item;
+    let srcIndex = this.curIndex - distance;
+    let chars = [];
+    for (let i = 0; i < length; i++) {
+      let byte = this.bytes[srcIndex + i];
+      this.bytes.push(byte);
+      chars.push(this.stringValue(byte));
+      this.curIndex += 1;
+    }
+    return {
+      type: item.type,
+      data: item.data,
+      length,
+      distance,
+      chars
+    };
   }
 
   stringValue(byte: number): string {
@@ -69,73 +131,211 @@ class DecodeItemParser {
       return `0x${byte.toString(16).padStart(2, '0')}`;
     }
   }
+}
 
-  parseMatch(item: Match) {
-    let { length, distance } = item;
-    let srcIndex = this.index - distance;
-    let stringValue = [];
-    for (let i = 0; i < length; i++) {
-      let byte = this.decodedBytes[srcIndex + i];
-      this.decodedBytes.push(byte);
-      stringValue.push(this.stringValue(byte));
-      this.index += 1;
+class DecodeCharParser {
+  items: DecodeItem[];
+  curIndex: number;
+  parsedItems: DecodeChar[];
+  matches: MatchDecodeItem[];
+  constructor(items: DecodeItem[]) {
+    this.items = items;
+    this.curIndex = 0;
+    this.matches = [];
+    this.parsedItems = [];
+  }
+  parse(): DecodeChar[] {
+    for (let item of this.items) {
+      this.parseItem(item);
     }
-    item.stringValue = stringValue;
+    return this.parsedItems;
+  }
+
+  parseItem(item: DecodeItem) {
+    if (item.type === DecodeItemType.Literal) {
+      this.decodeLiteralItem(item as LiteralDecodeItem);
+    } else if (item.type === DecodeItemType.Match) {
+      return this.decodeMatchItem(item as MatchDecodeItem);
+    } else {
+      throw `Unexpected item type ${item.type}`;
+    }
+  }
+
+  decodeLiteralItem(item: LiteralDecodeItem) {
+    this.parsedItems.push({
+      type: DecodeCharType.Literal,
+      char: item.chars[0],
+      index: this.curIndex,
+      item,
+      bits: item.data.bits,
+      bitLength: item.data.bits.length,
+      destMatchIndices: []
+    });
+    this.curIndex += 1;
+  }
+  decodeMatchItem(item: MatchDecodeItem) {
+    let { distance, length } = item;
+    if (length !== item.chars.length) {
+      throw `Error with length`;
+    }
+    let srcIndex = this.curIndex - distance;
+    let bitLengthPerChar = item.data.bits.length / item.chars.length;
+
+    this.matches.push(item);
+    let matchIndex = this.matches.length - 1;
+    for (let i = 0; i < item.chars.length; i++) {
+      let result: MatchDecodeChar = {
+        type: DecodeCharType.Match,
+        char: item.chars[i],
+        index: this.curIndex,
+        item,
+        bits: item.data.bits,
+        bitLength: bitLengthPerChar,
+        srcIndex,
+        matchIndex,
+        destMatchIndices: []
+      };
+      this.parsedItems.push(result);
+      let srcItem = this.parsedItems[srcIndex];
+      srcItem.destMatchIndices.push(matchIndex);
+      this.curIndex += 1;
+      srcIndex += 1;
+    }
   }
 }
 
+export class CharController {
+  el: HTMLElement;
+  matches: MatchDecodeItem[];
+  chars: DecodeChar[];
+  animator: AnimationController | null;
+  constructor(
+    el: HTMLElement,
+    chars: DecodeChar[],
+    matches: MatchDecodeItem[]
+  ) {
+    this.el = el;
+    this.matches = matches;
+    this.chars = chars;
+    this.animator = null;
+  }
+
+  run() {
+    this.addListeners();
+    this.updateUI();
+  }
+
+  addListeners() {
+    this.addMouseOverListener();
+    findEl(`#reveal`).addEventListener('click', () => this.revealAll());
+  }
+
+  updateUI() {}
+
+  addMouseOverListener() {
+    this.el.addEventListener('mouseover', (evt: Event) =>
+      this.handleMouseOver(evt as MouseEvent)
+    );
+  }
+
+  handleMouseOver(evt: MouseEvent) {
+    let target = evt.target as HTMLElement;
+    if (!target.classList.contains(HTML_CHAR_CLASS)) {
+      return;
+    }
+    evt.stopPropagation();
+    let index = parseInt('' + target.dataset['index']);
+    let char = this.chars[index];
+  }
+
+  activate(char: DecodeChar) {
+    Array.from(document.querySelectorAll('.' + HTML_CHAR_ACTIVE_CLASS)).forEach(
+      el => el.classList.remove(HTML_CHAR_ACTIVE_CLASS)
+    );
+    let el = this.findEl(char.index);
+    el.classList.add(HTML_CHAR_ACTIVE_CLASS);
+  }
+
+  reveal(char: DecodeChar) {
+    let el = this.findEl(char.index);
+    el.classList.remove(HTML_HIDDEN);
+  }
+
+  animate() {
+    this.animator = new AnimationController(this);
+    this.animator.run();
+  }
+
+  revealAll() {
+    if (this.animator) {
+      this.animator.stop();
+      this.animator = null;
+    }
+    removeAllClass([HTML_HIDDEN]);
+  }
+
+  findEl(index: number): Element {
+    let el = document.querySelector(`[data-index="${index}"]`);
+    if (!el) {
+      throw `could not find src el`;
+    }
+    return el;
+  }
+}
+
+import AnimationController from './animation_controller';
+
 class App {
   path: string;
-  data: DecodeItem[];
-  el: Element;
-  constructor(path: string, el: Element) {
+  items: DecodeItem[];
+  chars: DecodeChar[];
+  matches: MatchDecodeItem[];
+  el: HTMLElement;
+  constructor(path: string, el: HTMLElement) {
     this.path = path;
-    this.data = [];
+    this.items = this.chars = this.matches = [];
     this.el = el;
   }
 
   async run() {
-    this.data = await this.loadData();
-    let parser = new DecodeItemParser(this.data);
-    parser.parse();
-    this.data = parser.data;
+    let rawData = await this.loadData();
+    this.items = new DecodeItemParser(rawData).parse();
+    let charParser = new DecodeCharParser(this.items);
+    this.chars = charParser.parse();
+    this.matches = charParser.matches;
 
-    this.printInRealtime();
+    this.render();
+    let controller = new CharController(this.el, this.chars, this.matches);
+    controller.run();
+    controller.animate();
   }
 
-  printInRealtime(index = 0) {
-    let bits_per_second = 16;
-    let item = this.data[index];
-    if (!item) {
-      return;
+  render() {
+    let { el, chars } = this;
+    for (let char of chars) {
+      el.appendChild(this.makeEl(char));
     }
-    let compressed_bit_length = item.data.bits.length;
-    let duration = 1000 * (compressed_bit_length / bits_per_second);
+  }
 
-    if (item.stringValue.length === 1) {
-      console.log(item.stringValue.join(''), duration);
-      this.appendChar(item.stringValue.join(''));
-      setTimeout(() => this.printInRealtime(index + 1), duration);
-    } else {
-      let chars = item.stringValue.slice();
-      chars.reverse();
-      let duration_per_char = duration / chars.length;
-      let next = () => {
-        let char = chars.pop();
-        if (!char) {
-          return this.printInRealtime(index + 1);
-        }
-        console.log(
-          'match ',
-          char,
-          duration_per_char,
-          duration,
-          item.stringValue.join('')
-        );
-        this.appendChar(char);
-        setTimeout(() => next(), duration_per_char);
-      };
-      next();
+  makeEl(char: DecodeChar): HTMLElement {
+    let el = document.createElement('span');
+    el.innerText = char.char;
+    el.classList.add(...HTML_CHAR_EL_CLASSES);
+    this.addAttributes(el, char);
+    return el;
+  }
+
+  addAttributes(el: HTMLElement, char: DecodeChar) {
+    el.classList.add(DecodeCharType[char.type]);
+    el.dataset['index'] = '' + char.index;
+    el.dataset['bitLength'] = '' + char.bitLength;
+    el.dataset[`destMatchIndices`] = char.destMatchIndices.join(',');
+    for (let matchIndex of char.destMatchIndices) {
+      el.dataset[`destMatchIndex-${matchIndex}`] = '1';
+    }
+    if (char.type === DecodeCharType.Match) {
+      el.dataset[`srcIndex`] = '' + (char as MatchDecodeChar).srcIndex;
+      el.dataset[`matchIndex`] = '' + (char as MatchDecodeChar).matchIndex;
     }
   }
 

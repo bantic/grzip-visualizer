@@ -1,0 +1,30 @@
+.character {
+  opacity: 0.7;
+}
+.active {
+  opacity: 1;
+}
+.hidden {
+  opacity: 0;
+}
+
+[data-match-index] {
+  background-color: rgba(98, 144, 228, 0.37);
+}
+
+.anim-char-active {
+  background-color: gray !important;
+  outline: 1px solid black;
+}
+
+.anim-src-char-active {
+  background-color: red !important;
+}
+
+.anim-match-src-active {
+  background-color: blue;
+}
+
+.anim-match-dest-active {
+  background-color: blue;
+}
