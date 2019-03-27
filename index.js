@@ -1,5 +1,4 @@
 const RAVEN_URL = require('./data/raven.json.dat');
-console.log('rav', RAVEN_URL);
 
 import App from './app';
 
