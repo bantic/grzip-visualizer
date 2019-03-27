@@ -10,24 +10,6 @@
   </head>
   <body>
     <h1>The Raven.gz</h1>
-    <div id="controls">
-      Bits Per Second
-      <span id="bps"></span>
-      <input
-        type="range"
-        name="bits-per-second"
-        id="bps-input"
-        min="4"
-        max="128"
-        step="4"
-        value="8"
-      />
-      <br />
-      <button id="reveal">Reveal All</button>
-      <button id="animate">Animate</button>
-      <button id="color-code">Color By Compression</button>
-      <button id="compression-code">Size By Compression</button>
-    </div>
     <div id="intro">
       <p>
         Gzip is a file format that uses the DEFLATE compression algorithm.
@@ -56,6 +38,24 @@
         The "Size By Compression" button adjusts all the characters to have a
         width that is proportional to the number of bits needed to encode them.
       </p>
+    </div>
+    <div id="controls">
+      Bits Per Second
+      <span id="bps"></span>
+      <input
+        type="range"
+        name="bits-per-second"
+        id="bps-input"
+        min="4"
+        max="128"
+        step="4"
+        value="8"
+      />
+      <br />
+      <button id="reveal">Reveal All</button>
+      <button id="animate">Animate</button>
+      <button id="color-code">Color By Compression</button>
+      <button id="compression-code">Size By Compression</button>
     </div>
     <section id="characters"></section>
   </body>
