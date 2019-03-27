@@ -16,3 +16,11 @@ export function removeAllClass(classNames: string[]) {
     e.classList.remove(...classNames)
   );
 }
+
+// Will return a value in the range 0-32 by 1
+export function quantize(val: number): number {
+  if (val > 16) {
+    throw `Bad val`;
+  }
+  return Math.round(val * 2);
+}

@@ -4,7 +4,7 @@ import {
   HTML_CHAR_CLASS,
   HTML_HIDDEN
 } from './html';
-import { findEl, removeAllClass } from './utils';
+import { findEl, removeAllClass, quantize } from './utils';
 
 interface DecodeData {
   bits: boolean[];
@@ -228,6 +228,22 @@ export class CharController {
   addListeners() {
     this.addMouseOverListener();
     findEl(`#reveal`).addEventListener('click', () => this.revealAll());
+    findEl(`#color-code`).addEventListener('click', () => {
+      this.revealColorCodes();
+    });
+    findEl(`#compression-code`).addEventListener('click', () => {
+      this.revealCompressionCodes();
+    });
+  }
+
+  revealCompressionCodes() {
+    this.revealAll();
+    this.el.classList.add('reveal-compression-codes');
+  }
+
+  revealColorCodes() {
+    this.revealAll();
+    this.el.classList.add('reveal-color-codes');
   }
 
   updateUI() {}
@@ -271,7 +287,7 @@ export class CharController {
       this.animator.stop();
       this.animator = null;
     }
-    removeAllClass([HTML_HIDDEN]);
+    this.el.classList.add('reveal-all');
   }
 
   findEl(index: number): Element {
@@ -314,12 +330,18 @@ class App {
     let { el, chars } = this;
     for (let char of chars) {
       el.appendChild(this.makeEl(char));
+      if (char.char === '\\n') {
+        el.appendChild(document.createElement('br'));
+      }
     }
   }
 
   makeEl(char: DecodeChar): HTMLElement {
     let el = document.createElement('span');
     el.innerText = char.char;
+    if (char.char === ' ') {
+      el.innerHTML = '&nbsp;';
+    }
     el.classList.add(...HTML_CHAR_EL_CLASSES);
     this.addAttributes(el, char);
     return el;
@@ -329,6 +351,7 @@ class App {
     el.classList.add(DecodeCharType[char.type]);
     el.dataset['index'] = '' + char.index;
     el.dataset['bitLength'] = '' + char.bitLength;
+    el.dataset['quantizedBitLength'] = '' + quantize(char.bitLength);
     el.dataset[`destMatchIndices`] = char.destMatchIndices.join(',');
     for (let matchIndex of char.destMatchIndices) {
       el.dataset[`destMatchIndex-${matchIndex}`] = '1';

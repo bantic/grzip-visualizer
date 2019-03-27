@@ -1,0 +1,57 @@
+.character {
+  color: #404040;
+  font-size: 1.25em;
+  display: inline-block;
+  text-align: center;
+  font-family: monospace;
+}
+
+.hidden {
+  opacity: 0;
+}
+
+.reveal-all .hidden {
+  opacity: 1;
+}
+
+[data-match-index] {
+  background-color: #cddbf55e;
+}
+
+.anim-char-active {
+  color: white;
+  outline: 1px solid black;
+}
+
+.anim-char-active.Match {
+  background-color: blue;
+}
+
+.anim-char-active.Literal {
+  background-color: gray;
+}
+
+.anim-src-char-active {
+  color: white !important;
+  background-color: red !important;
+}
+
+.anim-match-src-active {
+  color: black;
+  background-color: #f78989;
+}
+
+.anim-match-dest-active {
+  background-color: #1b00ff75;
+}
+
+@for $i from 0 through 32 {
+  // See http://doejo.com/blog/dynamically-generating-colors-with-sass-for-data-visualization/
+  .reveal-color-codes [data-quantized-bit-length='#{$i}'] {
+    background: mix(red, blue, $i * (100/32));
+  }
+
+  .reveal-compression-codes [data-quantized-bit-length='#{$i}'] {
+    width: #{$i / 16}em;
+  }
+}

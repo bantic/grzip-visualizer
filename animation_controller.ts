@@ -92,6 +92,16 @@ export default class AnimationController {
 
   stop() {
     this.running = false;
+    this.clearClasses();
+  }
+
+  clearClasses() {
+    removeAllClass([
+      HTML_ANIM_CHAR_ACTIVE,
+      HTML_ANIM_SRC_CHAR_ACTIVE,
+      HTML_ANIM_MATCH_DEST_ACTIVE,
+      HTML_ANIM_MATCH_SRC_ACTIVE
+    ]);
   }
 
   updateStats(char: DecodeChar) {
@@ -104,12 +114,7 @@ export default class AnimationController {
   }
 
   reveal(char: DecodeChar) {
-    removeAllClass([
-      HTML_ANIM_CHAR_ACTIVE,
-      HTML_ANIM_SRC_CHAR_ACTIVE,
-      HTML_ANIM_MATCH_DEST_ACTIVE,
-      HTML_ANIM_MATCH_SRC_ACTIVE
-    ]);
+    this.clearClasses();
     this.controller.reveal(char);
     this.activate(char);
     this.highlightMatch(char);
