@@ -89,6 +89,7 @@ export default class AnimationController {
     let now = new Date().getTime();
     let elapsedSec = (now - lastRun) / 1000;
     bitsToReveal += bitsPerSecond * elapsedSec;
+    let chars = [];
     while (true) {
       let char = this.controller.chars[this.curIndex];
       if (!char) {
@@ -97,11 +98,18 @@ export default class AnimationController {
       if (char.bitLength <= bitsToReveal) {
         this.curIndex += 1;
         bitsToReveal -= char.bitLength;
-        this.reveal(char);
+        chars.push(char);
         this.updateStats(char);
       } else {
         break;
       }
+    }
+
+    for (let char of chars) {
+      this.controller.reveal(char);
+    }
+    if (chars.length) {
+      this.reveal(chars[chars.length - 1]);
     }
     requestAnimationFrame(() => this.tick(bitsToReveal, now));
   }
