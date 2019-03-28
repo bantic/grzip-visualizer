@@ -23,6 +23,9 @@ body {
 }
 
 #characters {
+  max-height: 80vh;
+  overflow-y: scroll;
+  max-width: 100vw;
   margin-top: 1em;
   line-height: 1.75em;
   font-size: 1.65em;
@@ -64,8 +67,8 @@ body {
 }
 
 .anim-src-char-active {
-  color: white !important;
-  background-color: red !important;
+  color: white;
+  background-color: red;
 }
 
 .anim-match-src-active {
