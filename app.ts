@@ -4,7 +4,7 @@ import {
   HTML_CHAR_CLASS,
   HTML_HIDDEN
 } from './html';
-import { findEl, removeAllClass, quantize } from './utils';
+import { findEl, quantize } from './utils';
 
 interface DecodeData {
   bits: boolean[];
@@ -205,15 +205,18 @@ class DecodeCharParser {
 }
 
 export class CharController {
+  app: App;
   el: HTMLElement;
   matches: MatchDecodeItem[];
   chars: DecodeChar[];
   animator: AnimationController | null;
   constructor(
+    app: App,
     el: HTMLElement,
     chars: DecodeChar[],
     matches: MatchDecodeItem[]
   ) {
+    this.app = app;
     this.el = el;
     this.matches = matches;
     this.chars = chars;
@@ -285,7 +288,7 @@ export class CharController {
       this.animator.stop();
       this.animator = null;
     }
-    this.animator = new AnimationController(this);
+    this.animator = new AnimationController(this, this.app);
     this.animator.run();
   }
 
@@ -308,16 +311,30 @@ export class CharController {
 
 import AnimationController from './animation_controller';
 
-class App {
+interface MatchElMap {
+  src: { [key: string]: HTMLElement[] };
+  dest: { [key: string]: HTMLElement[] };
+}
+
+export class App {
   path: string;
   items: DecodeItem[];
   chars: DecodeChar[];
   matches: MatchDecodeItem[];
   el: HTMLElement;
+  charEls: { [key: string]: HTMLElement };
+  matchEls: {
+    [key: string]: {
+      srcEls: HTMLElement[];
+      destEls: HTMLElement[];
+    };
+  };
   constructor(path: string, el: HTMLElement) {
     this.path = path;
     this.items = this.chars = this.matches = [];
     this.el = el;
+    this.charEls = {};
+    this.matchEls = {};
   }
 
   async run() {
@@ -328,17 +345,41 @@ class App {
     this.matches = charParser.matches;
 
     this.render();
-    let controller = new CharController(this.el, this.chars, this.matches);
+    let controller = new CharController(
+      this,
+      this.el,
+      this.chars,
+      this.matches
+    );
     controller.run();
   }
 
   render() {
     let { el, chars } = this;
     for (let char of chars) {
-      el.appendChild(this.makeEl(char));
+      let charEl = this.makeEl(char);
+      el.appendChild(charEl);
       if (char.char === '\\n') {
         el.appendChild(document.createElement('br'));
       }
+      this.addToMap(char, charEl);
+    }
+  }
+
+  addToMap(char: DecodeChar, charEl: HTMLElement) {
+    this.charEls[char.index] = charEl;
+    for (let matchIndex of char.destMatchIndices) {
+      if (!this.matchEls[matchIndex]) {
+        this.matchEls[matchIndex] = { srcEls: [], destEls: [] };
+      }
+      this.matchEls[matchIndex].srcEls.push(charEl);
+    }
+    if (char.type === DecodeCharType.Match) {
+      let matchIndex = (char as MatchDecodeChar).matchIndex;
+      if (!this.matchEls[matchIndex]) {
+        this.matchEls[matchIndex] = { srcEls: [], destEls: [] };
+      }
+      this.matchEls[matchIndex].destEls.push(charEl);
     }
   }
 

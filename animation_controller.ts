@@ -3,7 +3,8 @@ import {
   MatchDecodeChar,
   MatchDecodeItem,
   DecodeCharType,
-  CharController
+  CharController,
+  App
 } from './app';
 import {
   BPS_INPUT_ID,
@@ -13,8 +14,13 @@ import {
   HTML_ANIM_MATCH_SRC_ACTIVE,
   HTML_ANIM_MATCH_DEST_ACTIVE
 } from './html';
-import { findEl, addAllClass, removeAllClass } from './utils';
+import { addAllClass } from './utils';
+interface HtmlChange {
+  els: HTMLElement[];
+  classNames: string[];
+}
 export default class AnimationController {
+  app: App;
   controller: CharController;
   curIndex: number;
   elapsed: number;
@@ -23,9 +29,16 @@ export default class AnimationController {
   bitsPerSecond: number;
   chars: DecodeChar[];
   matches: MatchDecodeItem[];
-  stats: object;
+  stats: {
+    startAt: null | number;
+    totalBits: number;
+    totalSec: number;
+    avgBps: number;
+  };
   running: boolean;
-  constructor(controller: CharController) {
+  pendingHtmlChanges: HtmlChange[];
+  constructor(controller: CharController, app: App) {
+    this.app = app;
     this.controller = controller;
     this.chars = controller.chars;
     this.matches = controller.matches;
@@ -38,11 +51,14 @@ export default class AnimationController {
     if (!bpsDisplay) throw `No bps input`;
     this.bpsDisplay = bpsDisplay as HTMLElement;
 
+    this.pendingHtmlChanges = [];
+
     this.running = false;
     this.stats = {
-      startAt: undefined,
+      startAt: null,
       totalBits: 0,
-      totalSec: 0
+      totalSec: 0,
+      avgBps: 0
     };
     this.bitsPerSecond = parseInt(this.bpsInput.value, 10);
     this.addListeners();
@@ -96,16 +112,16 @@ export default class AnimationController {
   }
 
   clearClasses() {
-    removeAllClass([
-      HTML_ANIM_CHAR_ACTIVE,
-      HTML_ANIM_SRC_CHAR_ACTIVE,
-      HTML_ANIM_MATCH_DEST_ACTIVE,
-      HTML_ANIM_MATCH_SRC_ACTIVE
-    ]);
+    for (let change of this.pendingHtmlChanges) {
+      for (let el of change.els) {
+        el.classList.remove(...change.classNames);
+      }
+    }
+    this.pendingHtmlChanges = [];
   }
 
   updateStats(char: DecodeChar) {
-    if (this.stats.startAt === undefined) {
+    if (this.stats.startAt === null) {
       this.stats.startAt = new Date().getTime();
     }
     this.stats.totalSec = (new Date().getTime() - this.stats.startAt) / 1000;
@@ -121,8 +137,12 @@ export default class AnimationController {
   }
 
   activate(char: DecodeChar) {
-    let el = this.controller.findEl(char.index);
+    let el = this.app.charEls[char.index];
     el.classList.add(HTML_ANIM_CHAR_ACTIVE);
+    this.pendingHtmlChanges.push({
+      els: [el],
+      classNames: [HTML_ANIM_CHAR_ACTIVE]
+    });
   }
 
   highlightMatch(char: DecodeChar) {
@@ -132,21 +152,30 @@ export default class AnimationController {
     let matchChar = char as MatchDecodeChar;
 
     // Find all src chars for this match, light them up
-    let srcChars = Array.from(
-      document.querySelectorAll(
-        `[data-dest-match-index-${matchChar.matchIndex}]`
-      )
-    );
-    addAllClass(srcChars, [HTML_ANIM_MATCH_SRC_ACTIVE]);
+    let srcEls = this.app.matchEls[matchChar.matchIndex].srcEls;
+    let srcElsClasses = [HTML_ANIM_MATCH_SRC_ACTIVE];
+    addAllClass(srcEls, srcElsClasses);
+    this.pendingHtmlChanges.push({
+      els: srcEls,
+      classNames: srcElsClasses
+    });
 
     // Find the src char for this char, light it up specially
-    let srcChar = findEl(`[data-index="${matchChar.srcIndex}"]`);
-    addAllClass([srcChar], [HTML_ANIM_SRC_CHAR_ACTIVE]);
+    let srcEl = this.app.charEls[matchChar.srcIndex];
+    let srcElClasses = [HTML_ANIM_SRC_CHAR_ACTIVE];
+    addAllClass([srcEl], srcElClasses);
+    this.pendingHtmlChanges.push({
+      els: [srcEl],
+      classNames: srcElClasses
+    });
 
     // Light up this entire match
-    let matchChars = Array.from(
-      document.querySelectorAll(`[data-match-index="${matchChar.matchIndex}"]`)
-    );
-    addAllClass(matchChars, [HTML_ANIM_MATCH_DEST_ACTIVE]);
+    let matchEls = this.app.matchEls[matchChar.matchIndex].destEls;
+    let matchElsClasses = [HTML_ANIM_MATCH_DEST_ACTIVE];
+    addAllClass(matchEls, matchElsClasses);
+    this.pendingHtmlChanges.push({
+      els: matchEls,
+      classNames: matchElsClasses
+    });
   }
 }
